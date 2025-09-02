@@ -117,6 +117,21 @@ pub name url="https://enter.domain.here:4443/anon":
 		-movflags +frag_keyframe+empty_moov+default_base_moof \
 		- | RUST_LOG=debug cargo run --bin hang -- publish --url "{{url}}" --name "{{name}}"
 
+gst-hang:
+	# Used for streaming to hang using gst-launch-1.0
+	# Change plugin path to a valid one
+	# For some reason, just does not like this command, so should be entered to shell alone
+	# That's why variables included there
+	GST_PLUGIN_PATH="/path/to/compiled/gst-plugins-rs/target/x86_64-unknown-linux-gnu/debug" \
+	gst-launch-1.0 \
+		--quiet \
+		ximagesrc use-damage=0 ! video/x-raw,framerate=25/1 ! \
+		videoconvert ! queue ! \
+		x264enc tune=zerolatency speed-preset=veryfast key-int-max=30 ! \
+		h264parse ! \
+		isofmp4mux fragment-duration=4000000 ! \
+		fdsink fd=1 | cargo run --bin hang -- publish --url "https://enter.domain.here:4443/anon" --name "bbb"
+
 # Publish a video using gstreamer to the localhost relay server
 pub-gst name url="https://enter.domain.here:4443/anon":
 	# Download the sample media.
