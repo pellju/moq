@@ -89,6 +89,23 @@ download-url name:
 		*) echo "unknown" && exit 1 ;; \
 	esac
 
+# ABR controller
+abr-controller:
+	cargo build --bin moq-abr-controller
+	cargo run --bin moq-abr-controller -- "https://enter.domain.here:4443/anon/abr" | cargo run --bin hang -- publish --url "https://enter.domain.here:4443/anon" --name "bbb"
+	#RUST_LOG=debug RUST_BACKTRACE=full cargo run --bin moq-abr-controller -- "https://enter.domain.here:4443/anon/abr" | cargo run --bin hang -- publish --url "https://enter.domain.here:4443/anon" --name "bbb"
+
+# Trigger for pushing first items to broadcasts
+trigger-abr:
+	cargo build -p moq-clock
+
+	cargo run --bin moq-clock -- --url "https://enter.domain.here:4443/anon/abr" --broadcast "abr" publish
+
+trigger-controller:
+	cargo build -p moq-clock
+
+	cargo run --bin moq-clock -- --url "https://enter.domain.here:4443/anon/controller" --broadcast "controller" publish
+
 # Publish a video using ffmpeg to the localhost relay server
 # NOTE: The `http` means that we perform insecure certificate verification.
 # Switch it to `https` when you're ready to use a real certificate.
@@ -118,19 +135,16 @@ pub name url="https://enter.domain.here:4443/anon":
 		- | RUST_LOG=debug cargo run --bin hang -- publish --url "{{url}}" --name "{{name}}"
 
 gst-hang:
-	# Used for streaming to hang using gst-launch-1.0
-	# Change plugin path to a valid one
-	# For some reason, just does not like this command, so should be entered to shell alone
-	# That's why variables included there
-	GST_PLUGIN_PATH="/path/to/compiled/gst-plugins-rs/target/x86_64-unknown-linux-gnu/debug" \
+	GST_PLUGIN_PATH="/path/to/gst-plugins-rs/target/x86_64-unknown-linux-gnu/debug" \
 	gst-launch-1.0 \
 		--quiet \
 		ximagesrc use-damage=0 ! video/x-raw,framerate=25/1 ! \
 		videoconvert ! queue ! \
-		x264enc tune=zerolatency speed-preset=veryfast key-int-max=30 ! \
+		x264enc tune=zerolatency speed-preset=veryfast key-int-max=30 bitrate=8000 vbv-buf-capacity=1000 ! \
 		h264parse ! \
 		isofmp4mux fragment-duration=4000000 ! \
 		fdsink fd=1 | cargo run --bin hang -- publish --url "https://enter.domain.here:4443/anon" --name "bbb"
+
 
 # Publish a video using gstreamer to the localhost relay server
 pub-gst name url="https://enter.domain.here:4443/anon":
@@ -141,12 +155,13 @@ pub-gst name url="https://enter.domain.here:4443/anon":
 	cargo build -p hang-gst
 
 	# Run gstreamer and pipe the output to our plugin
-	GST_PLUGIN_PATH="${PWD}/target/debug${GST_PLUGIN_PATH:+:$GST_PLUGIN_PATH}" \
-	GST_DEBUG="hangsink:4" \
+	#GST_PLUGIN_PATH="${PWD}/target/debug${GST_PLUGIN_PATH:+:$GST_PLUGIN_PATH}" \
+	GST_PLUGIN_PATH="/path/to/gst-plugins-rs/target/x86_64-unknown-linux-gnu/debug" \
+	GST_DEBUG=2 \
 	gst-launch-1.0 -v -e multifilesrc location="dev/{{name}}.fmp4" loop=true ! qtdemux name=demux \
-		demux.video_0 ! h264parse ! queue ! identity sync=true ! isofmp4mux name=mux chunk-duration=1 fragment-duration=1 ! \
-		hangsink url="{{url}}" tls-disable-verify=true broadcast="{{name}}" \
-		demux.audio_0 ! aacparse ! queue ! mux.
+		demux.video_0 ! h264parse ! queue ! identity sync=true ! isofmp4mux name=mux chunk-duration=500 fragment-duration=500 ! \
+		fdsink fd=1 | \
+		RUST_LOG=debug cargo run --bin hang -- publish --url "{{url}}" --name "bbb"
 
 # Subscribe to a video using gstreamer
 sub name url="https://enter.domain.here:4443/anon":
@@ -177,13 +192,14 @@ serve name:
 
 # Publish the clock broadcast
 # `action` is either `publish` or `subscribe`
-clock action url="https://enter.domain.here/anon":
+clock action url="https://enter.domain.here:4443/anon/clock":
+	cargo build -p moq-clock
 	if [ "{{action}}" != "publish" ] && [ "{{action}}" != "subscribe" ]; then \
 		echo "Error: action must be 'publish' or 'subscribe', got '{{action}}'" >&2; \
 		exit 1; \
 	fi
 
-	cargo run --bin moq-clock -- "{{url}}" --name "clock" {{action}}
+	cargo run --bin moq-clock -- --url "{{url}}" --broadcast "clock" {{action}}
 
 controller:
 	cargo build --bin moq-gamecontroller
