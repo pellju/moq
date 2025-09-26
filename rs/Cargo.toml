@@ -9,7 +9,8 @@ members = [
     "moq-relay",
     "moq-token",
     "moq-token-cli",
-	"moq-gamecontroller"
+	"moq-gamecontroller",
+	"moq-abr-controller",
 ]
 
 # without hang-gst because it requires gstreamer to be installed
@@ -22,7 +23,8 @@ default-members = [
     "moq-relay",
     "moq-token",
     "moq-token-cli",
-	"moq-gamecontroller"
+	"moq-gamecontroller",
+	"moq-abr-controller"
 ]
 resolver = "2"
 
