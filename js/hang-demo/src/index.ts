@@ -79,3 +79,35 @@ window.addEventListener('gamepaddisconnected', (e) => {
 });
 
 requestAnimationFrame(update);
+
+//---------------
+// ABR-related things
+//---------------
+const abrProps: Hang.ConnectionProps = { url: new URL("https://enter.domain.here:4443/anon/abr") };
+const abrConnection = new Hang.Connection(abrProps);
+const abrBroadcastName = "abr" as Moq.Path.Valid;
+const abrPublish = new Hang.Publish.Broadcast(abrConnection, {enabled: true, name: abrBroadcastName, controller: { enabled: true, message: "" }});
+
+const increaseBitrate = () => {
+	console.log("Setting bitrate: high");
+	abrPublish.controller?.message.set('high');
+	console.log("Sent request to backend");
+}
+
+const lowerBitrate = () => {
+	console.log("Setting bitrate: low");
+	abrPublish.controller?.message.set('low');
+	console.log("Sent request to backend");
+}
+
+document.addEventListener("keydown", (event) => {
+	const keyName = event.key;
+
+	//console.log(`${keyName}`);
+
+	if (keyName ==='l') { // Lower the bitrate
+		lowerBitrate();
+	} else if (keyName === 'h') { // Increase the bitrate
+		increaseBitrate();
+	}
+})

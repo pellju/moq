@@ -46,22 +46,22 @@ impl Abrcontroller {
 		loop {
 			match self.track.next_group().await {
 				Ok(Some(mut group)) => {
-					println!("[moq-abr-controller] Received a new group");
+					tracing::info!("[moq-abr-controller] Received a new group");
+					//println!("[moq-abr-controller] Received a new group");
 
 					let base = group.read_frame().await.context("[moq-abr-controller] Failed to get the first object")?.context("[moq-abr-controller] Empty group")?;
 					let base = String::from_utf8_lossy(&base);
+					tracing::info!("[moq-abr-controller] The value: {}", base);
 					if base.to_string() == "high" {
-						println!("[moq-abr-controller] Setting new bitrate to 9000 kbps!");
-						encoder.set_property("bitrate", 9000);
-						println!("[moq-abr-controller] Bitrate set to 9000 kbps!");
+						tracing::info!("[moq-abr-controller] Setting new bitrate to 9000 kbps!");
+						const newValue:u32 = 9000;
+						encoder.set_property("bitrate", &newValue);
+						//encoder.set_property("bitrate", 9000);
 					} else if base.to_string() == "low" {
-						println!("[moq-abr-controller] Setting new bitrate to 1000 kbps!");
-						encoder.set_property("bitrate", 1200);
-						println!("[moq-abr-controller] Bitrate set to 1000 kbps!");
-					} else {
-						println!("[moq-abr-controller] Setting new bitrate to 8000 kbps!");
-						encoder.set_property("bitrate", 8000);
-						println!("[moq-abr-controller] Bitrate set to 8000 kbps!");
+						tracing::info!("[moq-abr-controller] Setting new bitrate to 1000 kbps!");
+						const newValue:u32 = 1000;
+						encoder.set_property("bitrate", &newValue);
+						//encoder.set_property("bitrate", 1000);
 					}
 				}
 
